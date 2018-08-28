@@ -428,11 +428,14 @@ static void MaybeOverrideVerbosity() {
 bool ParsedOptions::DoParse(const RuntimeOptions& options,
                             bool ignore_unrecognized,
                             RuntimeArgumentMap* runtime_options) {
+#if 0
   for (size_t i = 0; i < options.size(); ++i) {
     if (true && options[0].first == "-Xzygote") {
       LOG(INFO) << "option[" << i << "]=" << options[i].first;
     }
   }
+#endif
+  LOG(INFO) << "ParsedOptions::DoParse start";
 
   auto parser = MakeParser(ignore_unrecognized);
 
@@ -596,6 +599,7 @@ bool ParsedOptions::DoParse(const RuntimeOptions& options,
   }
 
   *runtime_options = std::move(args);
+  LOG(INFO) << "DoParse End";
   return true;
 }
 
