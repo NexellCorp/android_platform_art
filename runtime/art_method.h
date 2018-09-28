@@ -549,7 +549,7 @@ class ArtMethod FINAL {
   }
 
   void SetEntryPointFromJni(const void* entrypoint) {
-    DCHECK(IsNative());
+    // DCHECK(IsNative());
     SetEntryPointFromJniPtrSize(entrypoint, sizeof(void*));
   }
 
@@ -764,16 +764,19 @@ class ArtMethod FINAL {
   }
 
   template<typename T>
-  ALWAYS_INLINE void SetNativePointer(MemberOffset offset, T new_value, size_t pointer_size) {
-    static_assert(std::is_pointer<T>::value, "T must be a pointer type");
-    DCHECK(ValidPointerSize(pointer_size)) << pointer_size;
+  ALWAYS_INLINE void SetNativePointer(MemberOffset offset, T new_value, size_t /* pointer_size */) {
+    // static_assert(std::is_pointer<T>::value, "T must be a pointer type");
+    // DCHECK(ValidPointerSize(pointer_size)) << pointer_size;
+    // const auto addr = reinterpret_cast<uintptr_t>(this) + offset.Uint32Value();
+    // if (pointer_size == sizeof(uint32_t)) {
+    //   uintptr_t ptr = reinterpret_cast<uintptr_t>(new_value);
+    //   *reinterpret_cast<uint32_t*>(addr) = dchecked_integral_cast<uint32_t>(ptr);
+    // } else {
+    //   *reinterpret_cast<uint64_t*>(addr) = reinterpret_cast<uintptr_t>(new_value);
+    // }
     const auto addr = reinterpret_cast<uintptr_t>(this) + offset.Uint32Value();
-    if (pointer_size == sizeof(uint32_t)) {
-      uintptr_t ptr = reinterpret_cast<uintptr_t>(new_value);
-      *reinterpret_cast<uint32_t*>(addr) = dchecked_integral_cast<uint32_t>(ptr);
-    } else {
-      *reinterpret_cast<uint64_t*>(addr) = reinterpret_cast<uintptr_t>(new_value);
-    }
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(new_value);
+    *reinterpret_cast<uint32_t*>(addr) = static_cast<uint32_t>(ptr);
   }
 
   DISALLOW_COPY_AND_ASSIGN(ArtMethod);  // Need to use CopyFrom to deal with 32 vs 64 bits.
