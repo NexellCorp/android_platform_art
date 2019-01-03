@@ -313,9 +313,9 @@ void ArtMethod::Invoke(Thread* self, uint32_t* args, uint32_t args_size, JValue*
 }
 
 void ArtMethod::RegisterNative(const void* native_method, bool is_fast) {
-  CHECK(IsNative()) << PrettyMethod(this);
-  CHECK(!IsFastNative()) << PrettyMethod(this);
-  CHECK(native_method != nullptr) << PrettyMethod(this);
+  // CHECK(IsNative()) << PrettyMethod(this);
+  // CHECK(!IsFastNative()) << PrettyMethod(this);
+  // CHECK(native_method != nullptr) << PrettyMethod(this);
   if (is_fast) {
     SetAccessFlags(GetAccessFlags() | kAccFastNative);
   }

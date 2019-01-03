@@ -484,11 +484,13 @@ bool Runtime::ParseOptions(const RuntimeOptions& raw_options,
 }
 
 bool Runtime::Create(RuntimeArgumentMap&& runtime_options) {
+  LOG(INFO) << "Runtime::Create Entered";
   // TODO: acquire a static mutex on Runtime to avoid racing.
   if (Runtime::instance_ != nullptr) {
     return false;
   }
   instance_ = new Runtime;
+  LOG(INFO) << "Call Init()";
   if (!instance_->Init(std::move(runtime_options))) {
     // TODO: Currently deleting the instance will abort the runtime on destruction. Now This will
     // leak memory, instead. Fix the destructor. b/19100793.
@@ -496,6 +498,7 @@ bool Runtime::Create(RuntimeArgumentMap&& runtime_options) {
     instance_ = nullptr;
     return false;
   }
+  LOG(INFO) << "End Create";
   return true;
 }
 
@@ -565,6 +568,7 @@ std::string Runtime::GetCompilerExecutable() const {
 
 bool Runtime::Start() {
   VLOG(startup) << "Runtime::Start entering";
+  LOG(INFO) << "Runtime::Start entering";
 
   CHECK(!no_sig_chain_) << "A started runtime should have sig chain enabled";
 
@@ -597,10 +601,12 @@ bool Runtime::Start() {
 
   // InitNativeMethods needs to be after started_ so that the classes
   // it touches will have methods linked to the oat file if necessary.
+  LOG(INFO) << "Start: call InitNativeMethods()";
   {
     ScopedTrace trace2("InitNativeMethods");
     InitNativeMethods();
   }
+  LOG(INFO) << "Start: End InitNativeMethods()";
 
   // Initialize well known thread group values that may be accessed threads while attaching.
   InitThreadGroups(self);
@@ -678,6 +684,7 @@ bool Runtime::Start() {
                  trace_config_->trace_mode,
                  0);
   }
+  LOG(INFO) << "Runtime::Start End";
 
   return true;
 }
@@ -933,6 +940,7 @@ void Runtime::SetSentinel(mirror::Object* sentinel) {
 }
 
 bool Runtime::Init(RuntimeArgumentMap&& runtime_options_in) {
+  LOG(INFO) << "Init Entered";
   // (b/30160149): protect subprocesses from modifications to LD_LIBRARY_PATH, etc.
   // Take a snapshot of the environment at the time the runtime was created, for use by Exec, etc.
   env_snapshot_.TakeSnapshot();
@@ -1015,6 +1023,7 @@ bool Runtime::Init(RuntimeArgumentMap&& runtime_options_in) {
   }
 
   XGcOption xgc_option = runtime_options.GetOrDefault(Opt::GcOption);
+  LOG(INFO) << "Init: call gc::Heap()";
   heap_ = new gc::Heap(runtime_options.GetOrDefault(Opt::MemoryInitialSize),
                        runtime_options.GetOrDefault(Opt::HeapGrowthLimit),
                        runtime_options.GetOrDefault(Opt::HeapMinFree),
@@ -1045,6 +1054,7 @@ bool Runtime::Init(RuntimeArgumentMap&& runtime_options_in) {
                        xgc_option.gcstress_,
                        runtime_options.GetOrDefault(Opt::EnableHSpaceCompactForOOM),
                        runtime_options.GetOrDefault(Opt::HSpaceCompactForOOMMinIntervalsMs));
+  LOG(INFO) << "Init: End gc::Heap()";
 
   if (!heap_->HasBootImageSpace() && !allow_dex_file_fallback_) {
     LOG(ERROR) << "Dex file fallback disabled, cannot continue without image.";
@@ -1161,11 +1171,13 @@ bool Runtime::Init(RuntimeArgumentMap&& runtime_options_in) {
   class_linker_ = new ClassLinker(intern_table_);
   if (GetHeap()->HasBootImageSpace()) {
     std::string error_msg;
+    LOG(INFO) << "Init: " << __LINE__;
     bool result = class_linker_->InitFromBootImage(&error_msg);
     if (!result) {
       LOG(ERROR) << "Could not initialize from image: " << error_msg;
       return false;
     }
+    LOG(INFO) << "Init: " << __LINE__;
     if (kIsDebugBuild) {
       for (auto image_space : GetHeap()->GetBootImageSpaces()) {
         image_space->VerifyImageAllocations();
@@ -1181,10 +1193,12 @@ bool Runtime::Init(RuntimeArgumentMap&& runtime_options_in) {
       }
       boot_class_path_string_ = Join(dex_locations, ':');
     }
+    LOG(INFO) << "Init: " << __LINE__;
     {
       ScopedTrace trace2("AddImageStringsToTable");
       GetInternTable()->AddImagesStringsToTable(heap_->GetBootImageSpaces());
     }
+    LOG(INFO) << "Init: " << __LINE__;
     {
       ScopedTrace trace2("MoveImageClassesToClassTable");
       GetClassLinker()->AddBootImageClassesToClassTable();
@@ -1311,12 +1325,14 @@ bool Runtime::Init(RuntimeArgumentMap&& runtime_options_in) {
   }
 
   VLOG(startup) << "Runtime::Init exiting";
+  LOG(INFO) << "Runtime::Init exiting";
 
   return true;
 }
 
 void Runtime::InitNativeMethods() {
   VLOG(startup) << "Runtime::InitNativeMethods entering";
+  LOG(INFO) << "Runtime::InitNativeMethods entering";
   Thread* self = Thread::Current();
   JNIEnv* env = self->GetJniEnv();
 
@@ -1357,6 +1373,7 @@ void Runtime::InitNativeMethods() {
   WellKnownClasses::LateInit(env);
 
   VLOG(startup) << "Runtime::InitNativeMethods exiting";
+  LOG(INFO) << "Runtime::InitNativeMethods exiting";
 }
 
 void Runtime::ReclaimArenaPoolMemory() {

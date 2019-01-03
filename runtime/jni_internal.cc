@@ -96,7 +96,7 @@ static void ThrowNoSuchMethodError(ScopedObjectAccess& soa, mirror::Class* c,
                                  kind, c->GetDescriptor(&temp), name, sig);
 }
 
-static void ReportInvalidJNINativeMethod(const ScopedObjectAccess& soa, mirror::Class* c,
+__attribute__((unused)) static void ReportInvalidJNINativeMethod(const ScopedObjectAccess& soa, mirror::Class* c,
                                          const char* kind, jint idx, bool return_errors)
     SHARED_REQUIRES(Locks::mutator_lock_) {
   LOG(return_errors ? ERROR : FATAL) << "Failed to register native method in "
@@ -2091,35 +2091,35 @@ class JNI {
   }
 
   static jint RegisterNativeMethods(JNIEnv* env, jclass java_class, const JNINativeMethod* methods,
-                                    jint method_count, bool return_errors) {
-    if (UNLIKELY(method_count < 0)) {
-      JavaVmExtFromEnv(env)->JniAbortF("RegisterNatives", "negative method count: %d",
-                                       method_count);
-      return JNI_ERR;  // Not reached except in unit tests.
-    }
-    CHECK_NON_NULL_ARGUMENT_FN_NAME("RegisterNatives", java_class, JNI_ERR);
+                                    jint method_count, bool /* return_errors */) {
+    // if (UNLIKELY(method_count < 0)) {
+    //   JavaVmExtFromEnv(env)->JniAbortF("RegisterNatives", "negative method count: %d",
+    //                                    method_count);
+    //   return JNI_ERR;  // Not reached except in unit tests.
+    // }
+    // CHECK_NON_NULL_ARGUMENT_FN_NAME("RegisterNatives", java_class, JNI_ERR);
     ScopedObjectAccess soa(env);
     mirror::Class* c = soa.Decode<mirror::Class*>(java_class);
-    if (UNLIKELY(method_count == 0)) {
-      LOG(WARNING) << "JNI RegisterNativeMethods: attempt to register 0 native methods for "
-          << PrettyDescriptor(c);
-      return JNI_OK;
-    }
-    CHECK_NON_NULL_ARGUMENT_FN_NAME("RegisterNatives", methods, JNI_ERR);
+    // if (UNLIKELY(method_count == 0)) {
+    //   LOG(WARNING) << "JNI RegisterNativeMethods: attempt to register 0 native methods for "
+    //       << PrettyDescriptor(c);
+    //   return JNI_OK;
+    // }
+    // CHECK_NON_NULL_ARGUMENT_FN_NAME("RegisterNatives", methods, JNI_ERR);
     for (jint i = 0; i < method_count; ++i) {
       const char* name = methods[i].name;
       const char* sig = methods[i].signature;
       const void* fnPtr = methods[i].fnPtr;
-      if (UNLIKELY(name == nullptr)) {
-        ReportInvalidJNINativeMethod(soa, c, "method name", i, return_errors);
-        return JNI_ERR;
-      } else if (UNLIKELY(sig == nullptr)) {
-        ReportInvalidJNINativeMethod(soa, c, "method signature", i, return_errors);
-        return JNI_ERR;
-      } else if (UNLIKELY(fnPtr == nullptr)) {
-        ReportInvalidJNINativeMethod(soa, c, "native function", i, return_errors);
-        return JNI_ERR;
-      }
+      // if (UNLIKELY(name == nullptr)) {
+      //   ReportInvalidJNINativeMethod(soa, c, "method name", i, return_errors);
+      //   return JNI_ERR;
+      // } else if (UNLIKELY(sig == nullptr)) {
+      //   ReportInvalidJNINativeMethod(soa, c, "method signature", i, return_errors);
+      //   return JNI_ERR;
+      // } else if (UNLIKELY(fnPtr == nullptr)) {
+      //   ReportInvalidJNINativeMethod(soa, c, "native function", i, return_errors);
+      //   return JNI_ERR;
+      // }
       bool is_fast = false;
       // Notes about fast JNI calls:
       //
@@ -2159,48 +2159,51 @@ class JNI {
       // first, either as a direct or a virtual method. Then move to
       // the parent.
       ArtMethod* m = nullptr;
-      bool warn_on_going_to_parent = down_cast<JNIEnvExt*>(env)->vm->IsCheckJniEnabled();
-      for (mirror::Class* current_class = c;
-           current_class != nullptr;
-           current_class = current_class->GetSuperClass()) {
-        // Search first only comparing methods which are native.
-        m = FindMethod<true>(current_class, name, sig);
-        if (m != nullptr) {
-          break;
-        }
+      // bool warn_on_going_to_parent = down_cast<JNIEnvExt*>(env)->vm->IsCheckJniEnabled();
+      // bool warn_on_going_to_parent = true;
+      // for (mirror::Class* current_class = c;
+      //      current_class != nullptr;
+      //      current_class = current_class->GetSuperClass()) {
+      //   // Search first only comparing methods which are native.
+      //   m = FindMethod<true>(current_class, name, sig);
+      //   if (m != nullptr) {
+      //     break;
+      //   }
+      //
+      //   // Search again comparing to all methods, to find non-native methods that match.
+      //   m = FindMethod<false>(current_class, name, sig);
+      //   if (m != nullptr) {
+      //     break;
+      //   }
+      //
+      //   if (warn_on_going_to_parent) {
+      //     LOG(WARNING) << "CheckJNI: method to register \"" << name << "\" not in the given class. "
+      //                  << "This is slow, consider changing your RegisterNatives calls.";
+      //     warn_on_going_to_parent = false;
+      //   }
+      // }
+      m = FindMethod<true>(c, name, sig);
 
-        // Search again comparing to all methods, to find non-native methods that match.
-        m = FindMethod<false>(current_class, name, sig);
-        if (m != nullptr) {
-          break;
-        }
+      // if (m == nullptr) {
+      //   LOG(return_errors ? ERROR : INTERNAL_FATAL) << "Failed to register native method "
+      //       << PrettyDescriptor(c) << "." << name << sig << " in "
+      //       << c->GetDexCache()->GetLocation()->ToModifiedUtf8();
+      //   // Safe to pass in LOG(FATAL) since the log object aborts in destructor and only goes
+      //   // out of scope after the DumpClass is done executing.
+      //   c->DumpClass(LOG(return_errors ? ERROR : FATAL), mirror::Class::kDumpClassFullDetail);
+      //   ThrowNoSuchMethodError(soa, c, name, sig, "static or non-static");
+      //   return JNI_ERR;
+      // } else if (!m->IsNative()) {
+      //   LOG(return_errors ? ERROR : FATAL) << "Failed to register non-native method "
+      //       << PrettyDescriptor(c) << "." << name << sig
+      //       << " as native";
+      //   ThrowNoSuchMethodError(soa, c, name, sig, "native");
+      //   return JNI_ERR;
+      // }
+      //
+      // VLOG(jni) << "[Registering JNI native method " << PrettyMethod(m) << "]";
 
-        if (warn_on_going_to_parent) {
-          LOG(WARNING) << "CheckJNI: method to register \"" << name << "\" not in the given class. "
-                       << "This is slow, consider changing your RegisterNatives calls.";
-          warn_on_going_to_parent = false;
-        }
-      }
-
-      if (m == nullptr) {
-        LOG(return_errors ? ERROR : INTERNAL_FATAL) << "Failed to register native method "
-            << PrettyDescriptor(c) << "." << name << sig << " in "
-            << c->GetDexCache()->GetLocation()->ToModifiedUtf8();
-        // Safe to pass in LOG(FATAL) since the log object aborts in destructor and only goes
-        // out of scope after the DumpClass is done executing.
-        c->DumpClass(LOG(return_errors ? ERROR : FATAL), mirror::Class::kDumpClassFullDetail);
-        ThrowNoSuchMethodError(soa, c, name, sig, "static or non-static");
-        return JNI_ERR;
-      } else if (!m->IsNative()) {
-        LOG(return_errors ? ERROR : FATAL) << "Failed to register non-native method "
-            << PrettyDescriptor(c) << "." << name << sig
-            << " as native";
-        ThrowNoSuchMethodError(soa, c, name, sig, "native");
-        return JNI_ERR;
-      }
-
-      VLOG(jni) << "[Registering JNI native method " << PrettyMethod(m) << "]";
-
+      // LOG(WARNING) << "JNI Method " << PrettyMethod(m) << " set by " << fnPtr;
       m->RegisterNative(fnPtr, is_fast);
     }
     return JNI_OK;
